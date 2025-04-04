@@ -141,7 +141,35 @@ vim.opt.timeoutlen = 300
 vim.opt.splitright = true
 vim.opt.splitbelow = true
 
--- Sets how neovim will display certain whitespace characters in the editor.
+-- Run a shell command in the current file's directory and display output in a new buffer
+vim.api.nvim_create_user_command('Compile', function(opts)
+  -- Get current file's directory (falls back to vim's CWD if no file)
+  local cwd = vim.fn.expand '%:p:h'
+  -- Construct and run the command (handles spaces in paths)
+  local cmd = string.format('cd %s && %s', vim.fn.shellescape(cwd), opts.args)
+  local output = vim.fn.system(cmd)
+
+  -- Create a new buffer and insert output
+  vim.cmd 'new' -- Horizontal split (use 'vnew' for vertical)
+  vim.bo.buftype = 'nofile' -- Scratch buffer (not tied to a file)
+  vim.bo.bufhidden = 'wipe' -- Wipe buffer when closed
+  vim.api.nvim_buf_set_name(0, '!Output: ' .. opts.args) -- Name the buffer
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(output, '\n'))
+
+  -- Optional: Auto-close if command succeeds (no output)
+  --  if output == '' then
+  --    vim.cmd 'quit'
+  --  end
+end, { nargs = '+' }) -- '+' requires at least one argument
+vim.keymap.set('n', '<leader>cc', ':Compile ', { desc = 'Run command in CWD and show output' })
+
+-- explore map
+vim.keymap.set('n', '<leader>e', ':Explore <CR>', { desc = 'run file explorer' })
+
+vim.opt.wildmenu = true
+vim.opt.wildmode = 'longest:full,full' -- Tab completion like Emacs
+
+-- Map <leader>e to open file finder starting from cwd
 --  See `:help 'list'`
 --  and `:help 'listchars'`
 vim.opt.list = true
